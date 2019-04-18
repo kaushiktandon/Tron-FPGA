@@ -60,12 +60,29 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 	//10 = down
 	//11 = left
 	
-	reg [1:0] board [24:0][24:0];
+	reg [8:0] p1RecentX [3:0];
+	reg [8:0] p1RecentY [3:0];
+	reg [8:0] p2RecentX [3:0];
+	reg [8:0] p2RecentY [3:0];
+	
+	reg [1:0] p1ArrayIndex;
+	reg [1:0] p2ArrayIndex;
+	reg [1:0] loopIndexI;
+	reg [1:0] loopIndexJ;
 	reg P1win=0;
 	reg P2win=0;
 	
-	reg upperlim=23;
+	reg upperlim = 500;
+	reg blockSize = 20;
+	reg halfBlock = 10;
 	
+	reg [1:0] P1lastDirections [3:0];
+	reg [1:0] P1lastDirectionIndex;
+	reg [9:0] P1startX;
+	reg [9:0] P1startY;
+	reg [9:0] P1endX;
+	reg [9:0] P1endY;
+		
 	always @(posedge DIV_CLK[21])
 		begin
 			if(reset)
@@ -91,6 +108,55 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 		end
 	always @(posedge DIV_CLK[21])
 	begin
+		P1lastDirections[0] <= P1lastDirections[1];
+		P1lastDirections[1] <= P1lastDirections[2];
+		P1lastDirections[2] <= P1lastDirections[3];
+		P1lastDirections[3] <= P1direction;
+	end
+	always @(posedge DIV_CLK[21])
+	begin
+		P1startX = P1xPos;
+		P1startY = P1yPos;
+		P1endX = P1xPos;
+		P1endY = P1yPos;
+		for(P1lastDirectionIndex = 3; P1lastDirectionIndex >= 0; P1lastDirectionIndex = P1lastDirectionIndex - 1)
+		begin
+			if(P1lastDirections[P1lastDirectionIndex] == 2'b00)
+			begin
+				P1endY <= P1endY + blockSize;
+			end
+			else if(P1lastDirections[P1lastDirectionIndex] == 2'b01)
+			begin
+				P1endX <= P1endX - blockSize;
+			end
+			else if(P1lastDirections[P1lastDirectionIndex] == 2'b10)
+			begin
+				P1endY <= P1endY - blockSize;
+			end
+			else if(P1lastDirections[P1lastDirectionIndex] == 2'b11)
+			begin
+				P1endX <= P1endX + blockSize;
+			end
+			//draw this 20 x 20 rectangle - todo
+			/*
+			
+			if(P1lastDirectionIndex == 3)
+				R2 <= (CounterY >= (P1endY-halfBlock) && CounterY<=(P1endY + halfBlock) && CounterX >= (P1endX-halfBlock) && CounterX <= (P1endX + halfBlock);
+			else if(P1lastDirectionIndex == 2)
+				R3 <= (CounterY >= (P1endY-halfBlock) && CounterY<=(P1endY + halfBlock) && CounterX >= (P1endX-halfBlock) && CounterX <= (P1endX + halfBlock);
+			else if(P1lastDirectionIndex == 1)
+				R4 <= (CounterY >= (P1endY-halfBlock) && CounterY<=(P1endY + halfBlock) && CounterX >= (P1endX-halfBlock) && CounterX <= (P1endX + halfBlock);
+			else
+				R5 <= (CounterY >= (P1endY-halfBlock) && CounterY<=(P1endY + halfBlock) && CounterX >= (P1endX-halfBlock) && CounterX <= (P1endX + halfBlock);
+			*/
+			//update vals
+			P1startX <= P1endX;
+			P1startY <= P1endY;
+		end
+		R1 <= R2 || R3 || R4 || R5;
+	end
+	always @(posedge DIV_CLK[21])
+	begin
 		if(reset)
 		begin
 			P1xPos <= 25;
@@ -100,17 +166,22 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 		if(P1direction == 2'b00)
 		begin
 			P1yPos<=P1yPos-1;
+			
 			if(P1yPos>upperlim || P1yPos<1)
 			begin
 				P2win<=1;
 			end
-			else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
-			begin
-				P2win<=1;
-			end
+			//else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
+			//begin
+			//	P2win<=1;
+			//end
 			else
 			begin
-				board[P1xPos][P1yPos]<=1;
+				p1ArrayIndex <= p1ArrayIndex + 1;
+				if(p1ArrayIndex == 3)
+					p1ArrayIndex <= 0;
+				p1RecentX[p1ArrayIndex] <= P1xPos;
+				p1RecentY[p1ArrayIndex] <= P1yPos;
 			end
 		end
 		else if(P1direction == 2'b01)
@@ -120,13 +191,17 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 			begin
 				P2win<=1;
 			end
-			else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
-			begin
-				P2win<=1;
-			end
+			//else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
+			//begin
+			//	P2win<=1;
+			//end
 			else
 			begin
-				board[P1xPos][P1yPos]<=1;
+				p1ArrayIndex <= p1ArrayIndex + 1;
+				if(p1ArrayIndex == 3)
+					p1ArrayIndex <= 0;
+				p1RecentX[p1ArrayIndex] <= P1xPos;
+				p1RecentY[p1ArrayIndex] <= P1yPos;
 			end
 		end
 		else if(P1direction == 2'b10)
@@ -136,13 +211,17 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 			begin
 				P2win<=1;
 			end
-			else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
-			begin
-				P2win<=1;
-			end
+			//else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
+			//begin
+			//	P2win<=1;
+			//end
 			else
 			begin
-				board[P1xPos][P1yPos]<=1;
+				p1ArrayIndex <= p1ArrayIndex + 1;
+				if(p1ArrayIndex == 3)
+					p1ArrayIndex <= 0;
+				p1RecentX[p1ArrayIndex] <= P1xPos;
+				p1RecentY[p1ArrayIndex] <= P1yPos;
 			end
 		end
 		else if(P1direction == 2'b11)
@@ -152,13 +231,38 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 			begin
 				P2win<=1;
 			end
-			else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
-			begin
-				P2win<=1;
-			end
+			//else if(board[P1xPos][P1yPos]==1 || board[P1xPos][P1yPos]==2)
+			//begin
+			//	P2win<=1;
+			//end
 			else
 			begin
-				board[P1xPos][P1yPos]<=1;
+				p1ArrayIndex <= p1ArrayIndex + 1;
+				if(p1ArrayIndex == 3)
+					p1ArrayIndex <= 0;
+				p1RecentX[p1ArrayIndex] <= P1xPos;
+				p1RecentY[p1ArrayIndex] <= P1yPos;
+			end
+		end
+	end
+	always @(posedge DIV_CLK[21])
+	begin
+		for(loopIndexI = 0; loopIndexI < 4; loopIndexI = loopIndexI + 1)
+		begin
+			for(loopIndexJ = 0; loopIndexJ < 4; loopIndexJ = loopIndexJ + 1)
+			begin
+				if((p1RecentX[loopIndexI] >= p2RecentX[loopIndexJ] - halfBlock && p1RecentX[loopIndexI] <= p2RecentX[loopIndexJ] + halfBlock) &&
+					(p1RecentY[loopIndexI] >= p2RecentY[loopIndexJ] - halfBlock && p1RecentY[loopIndexI] <= p2RecentY[loopIndexJ] + halfBlock))
+				begin
+					if(p1ArrayIndex == loopIndexI || p1ArrayIndex == loopIndexI-1)
+					begin
+						P2win <= 1;
+					end
+					else
+					begin
+						P1win <= 1;
+					end
+				end
 			end
 		end
 	end
