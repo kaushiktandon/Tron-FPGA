@@ -52,23 +52,24 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 	
 
 	
-	reg R1=0;
+	reg R1;
 	reg R2=0;
 	reg	R3=0;
 	reg	R4=0;
 	reg	R5=0;
-	
+	reg B1=0;
 	reg flag=1;
 
 	
 	
-	wire R = R1;//CounterY>=(100) && CounterY<=(200) && CounterX>=(100) && CounterX<=(200);//CounterY>=(yPosition-yPath) && CounterY<=(yPosition+yPath) && CounterX>=(xPosition-xPath) && CounterX<=(xPosition+xPath);
+	wire R;//CounterY>=(100) && CounterY<=(200) && CounterX>=(100) && CounterX<=(200);//CounterY>=(yPosition-yPath) && CounterY<=(yPosition+yPath) && CounterX>=(xPosition-xPath) && CounterX<=(xPosition+xPath);
+	assign R=R1;
 	reg G = 0;//CounterX>100 && CounterX<200 && CounterY[8:5]==7;
-	reg B = 0;
+	wire B = B1;
 
 	
-	reg [9:0] P1xPos = 10;
-	reg [9:0] P1yPos = 10;
+	reg [9:0] P1xPos = 200;
+	reg [9:0] P1yPos = 200;
 	
 	reg [9:0] P2xPos = 10;
 	reg [9:0] P2yPos = 10;
@@ -125,22 +126,59 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 	reg R4flag=0;
 	reg [8:0] R5pos=10; 
 	reg R5flag=1;
-	always @(posedge clk)
-	begin
+	reg [9:0] xpos[3:0];
+	reg [9:0] ypos[3:0];
+	
+	initial begin
+		xpos[3] = 200;
+		xpos[2] = 200;
+		xpos[1] = 200;
+		xpos[0] = 200;
 		
-			R2<=(CounterY>=(P1yPos-10) && CounterY<=(P1yPos+10) && CounterX>=(P1xPos-10) && CounterX<=(P1xPos+10));
+		ypos[3] = 200;
+		ypos[2] = 200;
+		ypos[1] = 200;
+		ypos[0] = 200;
+	end
+	
+	integer i;
+	
+	//assign R = (CounterY>=(ypos[3]-10) && CounterY<=(ypos[3]+10) && CounterX>=(xpos[3]-10) && CounterX<=(xpos[3]+10)) ||
+	//				(CounterY>=(ypos[2]-10) && CounterY<=(ypos[2]+10) && CounterX>=(xpos[2]-10) && CounterX<=(xpos[2]+10)) ||
+	//				(CounterY>=(ypos[1]-10) && CounterY<=(ypos[1]+10) && CounterX>=(xpos[1]-10) && CounterX<=(xpos[1]+10)) ||
+	//				(CounterY>=(ypos[0]-10) && CounterY<=(ypos[0]+10) && CounterX>=(xpos[0]-10) && CounterX<=(xpos[0]+10));
+	
+	always @(posedge DIV_CLK[21])
+	begin
+			xpos[3]<=P1xPos;
+			xpos[2]<=xpos[3];
+			xpos[1]<=xpos[2];
+			xpos[0]<=xpos[1];
 			
 			
+			ypos[3]<=P1yPos;
+			ypos[2]<=ypos[3];
+			ypos[1]<=ypos[2];
+			ypos[0]<=ypos[1];
+			
+			//R2<=(CounterY>=(P1yPos-10) && CounterY<=(P1yPos+10) && CounterX>=(P1xPos-10) && CounterX<=(P1xPos+10));
+			
+			for(i=0;i<=3;i=i+1)
+			begin
+				R1 = (CounterY>=(ypos[i]-10) && CounterY<=(ypos[i]+10) && CounterX>=(xpos[i]-10) && CounterX<=(xpos[i]+10)) | R1;
+			end 
+			/*
 			R3<=(CounterY>=(290) && CounterY<=(310) && CounterX>=(R3pos-10) && CounterX<=(R3pos+10));
 			
 			R4<=(CounterY>=(90) && CounterY<=(110) && CounterX>=(R4pos-10) && CounterX<=(R4pos+10));
-			
-			
-			
+						
 			R5<=(CounterY>=(R5pos-10) && CounterY<=(R5pos+10) && CounterX>=(90) && CounterX<=(110));
-			
+			*/
 			//flag=0;
-			R1<=R2||R3||R4|| R5;
+			
+			
+			
+			B1<=(CounterY>=(200-10) && CounterY<=(200+10) && CounterX>=(200-10) && CounterX<=(200+10));
 		
 	end
 	
@@ -148,11 +186,13 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 	
 	always @(posedge DIV_CLK[21])
 	begin
+		/*
 		if(reset)
 		begin
 			P1xPos <= 25;
 			P1yPos <= 25;
 		end
+		*/
 		if(R3flag==1)
 				R3pos<=R3pos+4;
 			else
@@ -190,7 +230,7 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 				
 		if(P1direction == 2'b00)
 		begin
-			P1yPos<=P1yPos-1;
+			P1yPos<=P1yPos-20;
 			
 			if(P1yPos>upperlim || P1yPos<1)
 			begin
@@ -201,7 +241,7 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 		end
 		else if(P1direction == 2'b01)
 		begin
-			P1xPos <= P1xPos + 1;
+			P1xPos <= P1xPos + 20;
 			if(P1xPos>upperlim || P1xPos<1)
 			begin
 				P2win<=1;
@@ -211,7 +251,7 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 		end
 		else if(P1direction == 2'b10)
 		begin
-			P1yPos<=P1yPos+1;
+			P1yPos<=P1yPos+20;
 			if(P1yPos>upperlim || P1yPos<1)
 			begin
 				P2win<=1;
@@ -220,7 +260,7 @@ module vga_demo(ClkPort, vga_h_sync, vga_v_sync, vga_r, vga_g, vga_b, Sw0, Sw1, 
 		end
 		else if(P1direction == 2'b11)
 		begin
-			P1xPos <= P1xPos - 1;
+			P1xPos <= P1xPos - 20;
 			if(P1xPos>upperlim || P1xPos<1)
 			begin
 				P2win<=1;
